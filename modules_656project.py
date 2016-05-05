@@ -103,6 +103,8 @@ def shadowing(dist_mob2base):
     shad_dict={}
     for i in range (0,road_l_m,10):
         shad_dict[i]=numpy.random.lognormal(mean=0.0, sigma=2.0, size=None)
+        #give size for different values
+        #convert to db or use random
         #print shad_dict
     shad_key = int(math.ceil(dist_mob2base/10.0)*10)
     return shad_dict[shad_key]
@@ -115,11 +117,18 @@ def fading():
     
     for i in range(10):
         n1=np.random.normal(0,1)
+        #give step size
         n2=np.random.normal(0,1)
+        #give 
         Gaussian_RV=n1+(n2*(1j))
         
         Rayleigh_RV=np.absolute(Gaussian_RV)
+        #linear 10*np.log10(Rayleigh_RV) professor
         Rayleigh_array.append(Rayleigh_RV)
+        # import numpy as np
+        #import np.random as nr
+        # numpy has 10* np.rayleigh(0,1,..)
+        # plot the distribution print the signal out, it should like fading signal
         
     Rayleigh_array.sort()
     return 10*numpy.log10(Rayleigh_array[1])
@@ -131,7 +140,7 @@ user_details =[]
 user_non_active=[]
 dropped_call={}
 blocked_call=[]
-
+'''
 #for each user that does not have a call up
 #while
 for i in range (2):
@@ -210,7 +219,7 @@ for i in range (2):
     else:
         user_non_active.append(i)
             
-        
+'''        
         
         
 
