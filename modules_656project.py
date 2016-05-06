@@ -51,13 +51,13 @@ def boresight_angle(d,sector):
         
     c = dot(u,v)/(norm(u)*norm(v))
     angle_boresight = int(np.degrees(arccos(c)))
-    print "angle",s[1][angle_boresight]
+    #print "angle",s[1][angle_boresight]
     return s[1][angle_boresight]
     
        
 def rsl_eirp(dist_mob2base):
     eirp_bore_sight = POW_TX+AG_GAIN_TX-LOSS
-    print "eirp_bore_sight=",eirp_bore_sight
+    #print "eirp_bore_sight=",eirp_bore_sight
     # caculating eirp for alpha sector
     eirp1_loss=tot_path_loss(dist_mob2base,ALPHA_F)
     eirp_bore_alpha = boresight_angle(dist_mob2base,ALPHA_F)
@@ -89,7 +89,7 @@ def propagation_loss(d,f):
     ah = (((1.1* math.log10(f) )-0.7)*hm) -((1.56*math.log10(f))-.8)
     oh = 69.55 + (26.16*math.log(f,10)) - (13.82*math.log(hb,10)) +((44.9-(6.55*math.log(hb,10)))*math.log(d,10)) -ah
     
-    print "oh =",oh
+    #print "oh =",oh
     return oh
 
 
