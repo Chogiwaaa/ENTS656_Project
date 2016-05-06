@@ -35,7 +35,7 @@ BETA_F= 865 #MHz
 
 #the mobile will have the following properties, some of which may be varied
 hm = 1.5 #in m, height of mobile
-hom = 3# db handoff margin
+HOM = 3# db handoff margin
 RSL_T = -102 #dBm mobile Rx Threshold
 
 #users uniformly distributed
@@ -244,11 +244,55 @@ for each_users in active_users:
                 for key,value in active_users[each_users][details].iteritems():
                     if key == 'user_loc':
                         new_user_loc = value
-                
 
-                
-                            
+                        rsl_sectorA,rsl_sectorB = md.rsl_eirp(new_user_loc)
+                        '''RSLSERVER is greater than or equal to the RSL threshold
+                            '''
+                        rsl_mob = max(rsl_sectorA,rsl_sectorB)
+                        
+                        if rsl_mob < RSL_T:
+            
+                            '''call attempt failed due to signal strength less than threshold
+                            And move to the next user
+                            '''
+                            if rsl_sectorA > rsl_sectorB:
+                                sector = "alpha"
+                            else:
+                                sector = "beta"
+                            active_users[each_users].append({"sector": sector})
+                            active_users[each_users].append({"call_status":"Call Failed"})
+                            active_users[each_users].append({"Call Dropped":"Signal Strength"})
+                            archieve_users= active_users[each_users]
+                            active_users[each_users] = []
+                            if serving_sector == 'alpha':
+                                NUM_CH_A +=1
+                            else:
+                                NUM_CH_B +=1
 
+                        else:
+                            if serving_sector == 'alpha':
+                                if rsl_sectorB >= rsl_sectorA + HOM:
+                                    active_users[each_users].append({"hand_off": serving_sector})
+                                    if NUM_CH_B >0:
+                                        active_users[each_users]["sector"] = "beta"
+                                        active_users[each_users]["rsl"] = rsl_sectorB
+                                        active_users[each_users].append({"hand_off_status": "Successful"})
+                                        NUM_CH_A -=1
+                                        NUM_CH_B +=1
+                                    else:
+                                        active_users[each_users].append({"hand_off_status": "Failure"})
+                            else:
+                                if rsl_sectorA >= rsl_sectorB + HOM:
+                                    active_users[each_users].append({"hand_off": serving_sector})
+                                    if NUM_CH_A >0:
+                                        active_users[each_users]["sector"] = "alpha"
+                                        active_users[each_users]["rsl"] = rsl_sectorA
+                                        active_users[each_users].append({"hand_off_status": "Successful"})
+                                        NUM_CH_A +=1
+                                        NUM_CH_B -=1
+                                    else:
+                                        active_users[each_users].append({"hand_off_status": "Failure"})
+                                        
                     
 ''' For each user that does not have a call up
     '''
