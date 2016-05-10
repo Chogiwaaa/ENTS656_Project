@@ -48,6 +48,7 @@ path = "/Users/ranjitha/Downloads/antenna_pattern.txt"
 s = numpy.loadtxt(path, unpack=True)
 
 active_users={}
+#active_users={517: [{'user_loc': 5500}, {'time': 50}, {'user_dir': 'south'}, {'user_distance': 1976.0684225631585}, {'sector': 'Beta'}, {'call_status': 'Call Established'}, {'call length': 5000}, {'rsl': -81.112321193743767}]}
 failed_users={}
 user_details =[]
 user_non_active=[]
@@ -126,7 +127,7 @@ def user_makes_new_call(i,j):
             ''' maximum rsl among alpha and beta is taken as the serving sector
                 '''
             if rsl_sectorA > rsl_sectorB:
-                sector = "Alpha"
+                sector = "alpha"
                 #user_details.append(sector)
                 if md.NUM_CH_A !=0:
                     user_details.append({"sector":sector})
@@ -145,7 +146,7 @@ def user_makes_new_call(i,j):
                         the serving sector and greater than threshold
                         '''
                     if rsl_sectorB > RSL_T:
-                        sector = "Beta"
+                        sector = "beta"
                         if md.NUM_CH_B !=0:
                             user_details.append({"sector":sector})
                             md.NUM_CH_B = md.NUM_CH_B-1
@@ -155,7 +156,7 @@ def user_makes_new_call(i,j):
                             active_users[i]=user_details
                             
             else:
-                sector = "Beta"
+                sector = "beta"
                 #user_details.append(sector)
                 if md.NUM_CH_B !=0:
                     user_details.append({"sector":sector})
@@ -189,127 +190,157 @@ def user_makes_new_call(i,j):
         return 0
     #print "New users",active_users
 
-def user_has_call(time):
-    '''Update the user’s location. We assume users will continue in the
-        same direction for the duration of their call.
-        '''
+def user_has_call(archieve_users ):
 
-#print "User has a call I am crazy"
-
-    for each_users in active_users:
-        for details in range (0,len(active_users[each_users])-1):
-            ''' To obtain the 'direction of the user'''
-            '''  if active list is item, successful call has been done
-                '''
-            if len(active_users[each_users]) == 0:
-                continue
-            else:
-                
-                for key,value in active_users[each_users][details].iteritems():
-                    if key == 'user_dir':
-                        user_Dir = value
-                '''To find the serving sector
-                '''
-                for key,value in active_users[each_users][details].iteritems():
+    user_dir =''
+    serving_sector =''
+    new_user_loc=0
+    
+    
+    for each_users in active_users:            
+        if len(active_users[each_users]) == 0:
+            break
+            print " "
+        else:
+            for details2 in active_users[each_users]:
+                for k,v in details2.items():
+                    #print k,v
+                    if k == 'user_dir':
+                        #print "user_dir",v
+                        user_dir = v
+            for details3 in active_users[each_users]:
+                for key,value in details3.items():
                     if key == 'sector':
                         serving_sector = value
-                        #print serving_sector
-                        
-            
-                for key,value in active_users[each_users][details].iteritems():
+                        #print "serving_sector",serving_sector
+            for details4 in active_users[each_users]:
+                for key,value in details4.items():
                     if key == 'user_loc':
-                        if user_Dir == 'north' and value >0 :
-                            active_users[each_users][details][key]=value-V_SPEED
-                            #print "Go Terps"
-                        elif user_Dir == 'south' and value <6000 :
-                            active_users[each_users][details][key]=value+V_SPEED
+                        #print "user moving"
+                        #print key,value
+                        #print "user_Dir",user_dir
+                        if user_dir == 'north' and value >0 :
+                            #print "details[key]=value-V_SPEED",value-V_SPEED
+                            details4[key]=value-V_SPEED
+                        elif user_dir == 'south' and value <6000 :
+                            #print "details[key]=value-V_SPEED",value+V_SPEED
+                            details4[key]=value+V_SPEED
                         if value <0 or value >6000:
                             active_users[each_users].append({"Call_exit_status":"Successful call"})
-                            #change list to dict if you want call number
-                            archieve_users= active_users[each_users]
+                            archieve_users = active_users[each_users]
                             active_users[each_users] = []
-                            continue 
-                            #print "due to end of road",archieve_users
-                            #print active_users
-                            
-                    
+            for details5 in active_users[each_users]:
+                for key,value in details5.items():
                     if key == 'call length':
-                        print key
-                        
                         if value > 0:
-                            active_users[each_users][details][key]=value-1
+                            details5[key]=value-1
                         else:
                             active_users[each_users].append({"Call_exit_status":"Successful call"})
-                            #change list to dict if you want call number
-                            archieve_users= active_users[each_users]
+                            archieve_users = active_users[each_users]
                             active_users[each_users] = []
-                            continue
-                            #print archieve_users
-                            #print active_users
                             if serving_sector == 'alpha':
-                                NUM_CH_A +=1
+                                md.NUM_CH_A +=1
                             else:
-                                NUM_CH_B +=1
-                '''Calculating the new RSL
-                    '''
-                if len(active_users[each_users]) == 0:
-                        continue
-                else:                           
-                    for key,value in active_users[each_users][details].iteritems():
-                        if key == 'user_loc':
-                            new_user_loc = value
-    
-                            rsl_sectorA,rsl_sectorB = md.rsl_eirp(new_user_loc)
-                            '''RSLSERVER is greater than or equal to the RSL threshold
+                                #print "NUM_CH_B",NUM_CH_B
+                                md.NUM_CH_B +=1
+            #if len(active_users[each_users])==0:
+                #print "contiue"
+                #continue
+            #else:
+            print ("RSL REcal")
+            for details1 in active_users[each_users]:
+                for key,value in details1.items():
+                    if key == 'user_loc':
+                        new_user_loc = value
+                    #print "new_user_loc",new_user_loc
+            if new_user_loc > 3000:
+                dist2mobbase_new = new_user_loc - 3000
+            else:
+                dist2mobbase_new = 3000-new_user_loc
+            dist_mob2base_send = math.sqrt((loc_b**2 + dist2mobbase_new**2))
+                #print "details",details
+            rsl_sectorA,rsl_sectorB = md.rsl_eirp(dist_mob2base_send,new_user_loc)
+                #rsl_sectorA,rsl_sectorB = -100,-90
+            #print "dist_mob2base_send,new_user_loc",dist_mob2base_send,new_user_loc
+            print "rsl_sectorA,rsl_sectorB ",rsl_sectorA,rsl_sectorB 
+            '''RSLSERVER is greater than or equal to the RSL threshold
                                 '''
-                            rsl_mob = max(rsl_sectorA,rsl_sectorB)
+            if serving_sector == "alpha":
+                rsl_mob = rsl_sectorA
+            else:
+                rsl_mob = rsl_sectorB
+            for details8 in active_users[each_users]:
+                for key,value in details8.items():
+                    if key == 'rsl':
+                        details8[key]=rsl_mob
+            
                             
-                            if rsl_mob < RSL_T:
+            if rsl_mob < RSL_T:
+                print "True"
                 
-                                '''call attempt failed due to signal strength less than threshold
+                '''call attempt failed due to signal strength less than threshold
                                 And move to the next user
-                                '''
-                                if rsl_sectorA > rsl_sectorB:
-                                    sector = "alpha"
-                                else:
-                                    sector = "beta"
-                                active_users[each_users].append({"sector": sector})
-                                active_users[each_users].append({"call_status":"Call Failed"})
-                                active_users[each_users].append({"Call Dropped":"Signal Strength"})
-                                archieve_users= active_users[each_users]
-                                active_users[each_users] = []
-                                if serving_sector == 'alpha':
-                                    NUM_CH_A +=1
-                                else:
-                                    NUM_CH_B +=1
+                '''
+                if rsl_sectorA > rsl_sectorB:
+                    sector = "alpha"
+                else:
+                    sector = "beta"
+                active_users[each_users].append({"sector": sector})
+                active_users[each_users].append({"call_status":"Call Failed"})
+                active_users[each_users].append({"Call Dropped":"Signal Strength"})
+                archieve_users= active_users[each_users]
+                active_users[each_users] = []
+                #print "active_users",active_users
+                #print "archieve_users",archieve_users
+                if serving_sector == 'alpha':
+                    md.NUM_CH_A +=1
+                else:
+                    md.NUM_CH_B +=1
     
-                            else:
-                                if serving_sector == 'alpha':
-                                    if rsl_sectorB >= rsl_sectorA + HOM:
-                                        active_users[each_users].append({"hand_off": serving_sector})
-                                        if NUM_CH_B >0:
-                                            active_users[each_users]["sector"] = "beta"
-                                            active_users[each_users]["rsl"] = rsl_sectorB
-                                            active_users[each_users].append({"hand_off_status": "Successful"})
-                                            NUM_CH_A -=1
-                                            NUM_CH_B +=1
-                                        else:
-                                            active_users[each_users].append({"hand_off_status": "Failure"})
-                                else:
-                                    if rsl_sectorA >= rsl_sectorB + HOM:
-                                        active_users[each_users].append({"hand_off": serving_sector})
-                                        if NUM_CH_A >0:
-                                            active_users[each_users]["sector"] = "alpha"
-                                            active_users[each_users]["rsl"] = rsl_sectorA
-                                            active_users[each_users].append({"hand_off_status": "Successful"})
-                                            NUM_CH_A +=1
-                                            NUM_CH_B -=1
-                                        else:
-                                            active_users[each_users].append({"hand_off_status": "Failure"})
+            else:
+                print "handoff open"
+                print "serving_sector",serving_sector
+                if serving_sector == 'alpha':
+                    print "serving_sector",serving_sector
+                    if rsl_sectorB >= rsl_sectorA + HOM:
+                        print "handoff happenning"
+                        active_users[each_users].append({"hand_off": serving_sector})
+                        if md.NUM_CH_B >0:
+                            for details6 in active_users[each_users]:
+                                for key,value in details6.items():
+                                    if key == 'sector':
+                                        details6[key]="beta"
+                                            #continue
+                                    if key == 'rsl':
+                                        details6[key] = rsl_sectorB
                                             
-    
-        print "archieve_users",archieve_users
-        print "active calls", active_users
+                            active_users[each_users].append({"hand_off_status": "Successful"})
+                            md.NUM_CH_A -=1
+                            md.NUM_CH_B +=1
+                        else:
+                            active_users[each_users].append({"hand_off_status": "Failure"})
+                    else:
+                        if rsl_sectorA >= rsl_sectorB + HOM:
+                            print "handoff happenning"
+                            active_users[each_users].append({"hand_off": serving_sector})
+                            if md.NUM_CH_A >0:
+                                for details7 in active_users[each_users]:
+                                    for key,value in details7.items():
+                                        if key == 'sector':
+                                            details7[key]="alpha"
+                                        if key == 'rsl':
+                                            details7[key] = rsl_sectorA
+                                active_users[each_users].append({"hand_off_status": "Successful"})
+                                md.NUM_CH_A +=1
+                                md.NUM_CH_B -=1
+                            else:
+                                active_users[each_users].append({"hand_off_status": "Failure"})
+
+                #print "after handoff" ,active_users
+    #print "archieve_users",archieve_users
+    #if archieve_users!=0:
+        #print archieve_users
+    return archieve_users
 ''' For hw2cell.docxach user that does not have a call up
     '''
 
@@ -330,29 +361,22 @@ print "Welcome to Python application which will simulate the downlink behavior o
 #for i in range (tot_sim_sec):
 active=0
 md.shadow_pre_cal()
+archieve_users=''
 for i in range (3600):
-
     '''160 users always on the road
 time        '''
-    #for j in range (no_users):
-    
+    for each_users in active_users:
+        if(len(active_users[each_users])!=0):
+            active+=1
+    if active!=0:
+        #print"has a call"
+        archieve_users = user_has_call(archieve_users)
+        active-=1
     for j in range (160):
-
-            
-        if active > 0:
-            #print ("users has a call for")
-            '''There is a proble here, prefrence should be given to the
-                active calls but not that all calls in the acctive calls should be serviced and then new call is initated
-                '''
-
-            user_has_call(i)
-            active-=1
-        else:
-
-            user_makes_new_call(i,j)
-            #print "hi"
-            if len(active_users) >0:
-                active+=1
+        user_makes_new_call(i,j)
+               
+print "archieve_users",archieve_users
+print "active_users",active_users
 
 
 
@@ -399,8 +423,8 @@ def num_of_call(sector_name):
     print ("The number of blocks due to capacity ")
     
     
-num_of_call('Beta')
-num_of_call('alpha')                                        
+#num_of_call('Beta')
+#num_of_call('alpha')                                        
                 
 
                 

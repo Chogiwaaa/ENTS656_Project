@@ -10,7 +10,7 @@ from numpy import (array, dot, arccos)
 from numpy.linalg import norm
 
 #basic paramaeters
-road_l=6 #km
+ROAD_L=6 #km
 del_t=1 #sec
 tot_sim_t= 1 # 1 or more hrs, total simulation time
 
@@ -41,36 +41,67 @@ v= 15#m/s (=54 kph = 33.553977 mph)
 # direction 50/50 chance of heading north or south
 path = "/Users/ranjitha/Downloads/antenna_pattern.txt"
 s = numpy.loadtxt(path, unpack=True)
+shad_dict={}
+
+def shadow_pre_cal():
+    '''calculating a log-normal distribution for 10m i.e., 0,10,20,30.. 6000
+        and round off the distance and ceil to the nearest ten's and pick
+    up the corresponding shadowing value '''
+    #converting km to m
+    road_l_m = ROAD_L*1000
+    #shad_array [rprint "active_users[each_users][details].iteritems()",list(active_users[each_users][details].iteritems())oad_l_km /10]
+    
+    for i in range (0,road_l_m,10):
+        shad_dict[i]=numpy.random.normal(0.0, 2.0, size=None)
+        #give size for different values
+        #convert to db or use random
+        #print shad_dict
+    #shad_key = int(math.ceil(dist_mob2base/10.0)*10)
+    #print shad_dict
+    #return shad_dict[shad_key]
+    
 
 def boresight_angle(d,sector):
-    u = array([20,d])
+    if d >=3000:
+        u = array([20,3000-d])
+    if d <3000:
+        u = array([20,3000-d])
     if sector == 860:
         v = array([0,1])
     elif sector == 865:
-        v = array([math.sqrt(3)/2,-1/2])
+        #v = array([math.sqrt(3)/2,-1/2])
+        v = array([0.866,-0.5])
         
     c = dot(u,v)/(norm(u)*norm(v))
     angle_boresight = int(np.degrees(arccos(c)))
-    #print "angle",s[1][angle_boresight]
+    #print "angle ",sector,s[1][angle_boresight]
+    #print "angle_boresight",angle_boresight
     return s[1][angle_boresight]
     
        
-def rsl_eirp(dist_mob2base):
+def rsl_eirp(dist_mob2base,user_loc):
+           
+#def rsl_eirp(r,y):
+    
+    
     eirp_bore_sight = POW_TX+AG_GAIN_TX-LOSS
     #print "eirp_bore_sight=",eirp_bore_sight
     # caculating eirp for alpha sector
     eirp1_loss=tot_path_loss(dist_mob2base,ALPHA_F)
-    eirp_bore_alpha = boresight_angle(dist_mob2base,ALPHA_F)
+    eirp_bore_alpha = boresight_angle(user_loc,ALPHA_F)
     eirp_alpha =  eirp_bore_sight - eirp_bore_alpha
-    rsl_alpha = eirp_alpha - tot_path_loss(dist_mob2base,ALPHA_F)
+    x,y,z = tot_path_loss(dist_mob2base,ALPHA_F)
+    rsl_alpha = eirp_alpha - x +y +z
     # calculating eirp for beta sector
     eirp2_loss=tot_path_loss(dist_mob2base,BETA_F)
-    eirp_bore_beta = boresight_angle(dist_mob2base,BETA_F)
+    eirp_bore_beta = boresight_angle(user_loc,BETA_F)
+    x,y,z = tot_path_loss(dist_mob2base,BETA_F)
     eirp_beta =  eirp_bore_sight - eirp_bore_beta
-    rsl_beta = eirp_beta - tot_path_loss(dist_mob2base,BETA_F)
+    rsl_beta = eirp_beta - x+y+z
+    #print "rsl_alpha",rsl_alpha,"rsl_beta",rsl_beta
     return (rsl_alpha,rsl_beta)
 
-    
+#rsl_eirp(2900.068,100)
     
     #no conversion needed of dbm and dbi
     
@@ -78,10 +109,10 @@ def tot_path_loss(dist_mob2base,freq):
     p_loss_V = propagation_loss(dist_mob2base,freq)
     #print "p_loss",p_loss_V
     shad_V = shadowing(dist_mob2base)
-    #print shad_V
+    #print "shad", shad_V
     fading_V = fading()
     #print fading_V
-    return (p_loss_V + shad_V + fading_V)
+    return (p_loss_V , shad_V , fading_V)
     
 
 def propagation_loss(d,f):
@@ -97,17 +128,11 @@ def shadowing(dist_mob2base):
     '''calculating a log-normal distribution for 10m i.e., 0,10,20,30.. 6000
         and round off the distance and ceil to the nearest ten's and pick
         up the corresponding shadowing value '''
-    #converting km to m
-    road_l_m = road_l*1000
-    #shad_array [road_l_km /10]
-    shad_dict={}
-    for i in range (0,road_l_m,10):
-        shad_dict[i]=numpy.random.lognormal(mean=0.0, sigma=2.0, size=None)
-        #give size for different values
-        #convert to db or use random
-        #print shad_dict
+  
     shad_key = int(math.ceil(dist_mob2base/10.0)*10)
+    #print "shadowing value", shad_dict[shad_key]
     return shad_dict[shad_key]
+
 
 def fading():
     '''compouted 10 fading values and choose the 2nd lowest value
@@ -131,7 +156,8 @@ def fading():
         # plot the distribution print the signal out, it should like fading signal
         
     Rayleigh_array.sort()
-    return 10*numpy.log10(Rayleigh_array[1])
+    
+    return 10*numpy.log10(Rayleigh_array[-2])
 
 #shadowing(10)
     
