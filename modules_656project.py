@@ -49,16 +49,8 @@ def shadow_pre_cal():
     up the corresponding shadowing value '''
     #converting km to m
     road_l_m = ROAD_L*1000
-    #shad_array [rprint "active_users[each_users][details].iteritems()",list(active_users[each_users][details].iteritems())oad_l_km /10]
-    
     for i in range (0,road_l_m,10):
         shad_dict[i]=numpy.random.normal(0.0, 2.0, size=None)
-        #give size for different values
-        #convert to db or use random
-        #print shad_dict
-    #shad_key = int(math.ceil(dist_mob2base/10.0)*10)
-    #print shad_dict
-    #return shad_dict[shad_key]
     
 
 def boresight_angle(d,sector):
@@ -69,58 +61,46 @@ def boresight_angle(d,sector):
     if sector == 860:
         v = array([0,1])
     elif sector == 865:
-        #v = array([math.sqrt(3)/2,-1/2])
         v = array([0.866,-0.5])
         
     c = dot(u,v)/(norm(u)*norm(v))
     angle_boresight = int(np.degrees(arccos(c)))
-    #print "angle ",sector,s[1][angle_boresight]
-    #print "angle_boresight",angle_boresight
     return s[1][angle_boresight]
     
-       
+    '''. The RSL will be determined by computing the EIRP in the direction of
+    the user from each sector and subtracting the path loss obtained by modelling the communications channel for that sector.
+        '''
 def rsl_eirp(dist_mob2base,user_loc):
-           
-#def rsl_eirp(r,y):
-    
-    
     eirp_bore_sight = POW_TX+AG_GAIN_TX-LOSS
-    #print "eirp_bore_sight=",eirp_bore_sight
-    # caculating eirp for alpha sector
     eirp1_loss=tot_path_loss(dist_mob2base,ALPHA_F)
     eirp_bore_alpha = boresight_angle(user_loc,ALPHA_F)
     eirp_alpha =  eirp_bore_sight - eirp_bore_alpha
     x,y,z = tot_path_loss(dist_mob2base,ALPHA_F)
     rsl_alpha = eirp_alpha - x +y +z
-    # calculating eirp for beta sector
     eirp2_loss=tot_path_loss(dist_mob2base,BETA_F)
     eirp_bore_beta = boresight_angle(user_loc,BETA_F)
     x,y,z = tot_path_loss(dist_mob2base,BETA_F)
     eirp_beta =  eirp_bore_sight - eirp_bore_beta
     rsl_beta = eirp_beta - x+y+z
-    #print "rsl_alpha",rsl_alpha,"rsl_beta",rsl_beta
     return (rsl_alpha,rsl_beta)
-
-#rsl_eirp(2900.068,100)
     
     #no conversion needed of dbm and dbi
     
 def tot_path_loss(dist_mob2base,freq):
     p_loss_V = propagation_loss(dist_mob2base,freq)
-    #print "p_loss",p_loss_V
     shad_V = shadowing(dist_mob2base)
-    #print "shad", shad_V
     fading_V = fading()
-    #print fading_V
     return (p_loss_V , shad_V , fading_V)
     
-
+    '''Use the Okamura-Hata model adjusted for a small city.
+        Include the mobile height term as required by the model.
+        Note that you will need to compute the distance from the mobile to
+        the basestation to get the propagation loss.
+        '''
 def propagation_loss(d,f):
     d=float(d)/1000.00
     ah = (((1.1* math.log10(f) )-0.7)*hm) -((1.56*math.log10(f))-.8)
     oh = 69.55 + (26.16*math.log(f,10)) - (13.82*math.log(hb,10)) +((44.9-(6.55*math.log(hb,10)))*math.log(d,10)) -ah
-    
-    #print "oh =",oh
     return oh
 
 
@@ -130,136 +110,20 @@ def shadowing(dist_mob2base):
         up the corresponding shadowing value '''
   
     shad_key = int(math.ceil(dist_mob2base/10.0)*10)
-    #print "shadowing value", shad_dict[shad_key]
     return shad_dict[shad_key]
 
 
 def fading():
     '''compouted 10 fading values and choose the 2nd lowest value
         '''
-    #Rayleigh_RV=[]
     Rayleigh_array = []
-    
     for i in range(10):
         n1=np.random.normal(0,1)
-        #give step size
         n2=np.random.normal(0,1)
-        #give 
         Gaussian_RV=n1+(n2*(1j))
-        
         Rayleigh_RV=np.absolute(Gaussian_RV)
-        #linear 10*np.log10(Rayleigh_RV) professor
         Rayleigh_array.append(Rayleigh_RV)
-        # import numpy as np
-        #import np.random as nr
-        # numpy has 10* np.rayleigh(0,1,..)
-        # plot the distribution print the signal out, it should like fading signal
-        
-    Rayleigh_array.sort()
-    
+    Rayleigh_array.sort()   
     return 10*numpy.log10(Rayleigh_array[-2])
-
-#shadowing(10)
-    
-active_user={}
-user_details =[]
-user_non_active=[]
-dropped_call={}
-blocked_call=[]
-'''
-#for each user that does not have a call up
-#while
-for i in range (2):
-    p_call = lam*del_t
-    x=numpy.random.random_sample()/1000
-    
-    if x < p_call:
-        #determine the users location along the road
-        user_loc = numpy.random.uniform(low=0.0, high=6000.0, size=None)
-        user_details.append(user_loc)
-        
-        #determine users direction (north or south)
-        user_dir = numpy.random.randint(2)
-        user_details.append(user_dir)
-
-        #to determine distance between the mobile and base station
-        if user_dir == 0:
-            #North
-            distance_user = 3000 - user_loc
-            dist_mob2base = math.sqrt((loc_b**2 + distance_user**2))
-            print dist_mob2base
-
-        elif user_dir == 1:
-            distance_user = user_loc - 3000
-            dist_mob2base = math.sqrt((loc_b**2 + distance_user**2))
-            print dist_mob2base
-
-        #total path loss
-
-        call_length = int(numpy.random.exponential(scale=180) )
-        #chech channel avialablity here 
-        while (call_length):
-            if (dist_mob2base >6000 or dist_mob2base< 0) or call_length <=0 :
-                break
-            rsl_mobA,rsl_mobB = rsl_eirp(dist_mob2base)
-            #print "rsl=",rsl_mob6
-            rsl_mob = max(rsl_mobA,rsl_mobB)
-            if rsl_mobA > rsl_mobB:
-                sector = "alpha"
-                al_sector = "beta"
-            else:
-                sector = "beta"
-                al_sector= "alpha"
-                
-            if rsl_mob >RSL_T:
-                
-                user_details.append(sector)
-                print "rsl=",rsl_mob
-                user_details.append(rsl_mob)
-                if NUM_CH_A!=0:
-                    user_details.append("Allocated")
-                    NUM_CH_A-=1
-                    active_user[i] = user_details
-                else:
-                    blocked_call[i]="blocked_capacity"
-                    if rsl_mobB >RSL_T:
-                        user_details.append(al_sector)
-                        if NUM_CH_B !=0:
-                            NUM_CH_B-=1
-                            active_user[i] = user_details
-                            #allocate channel
-    
-                        else:
-                            blocked_call[i]="blocked_capacity"
-                   
-            else:
-                dropped_call[i]="dropped_strength"
-                break #break for loop
-        call_length-=1
-        #doubt north or south -15 or +15
-        if user_dir == 0:
-            dist_mob2base-=15
-        else:
-            dist_mob2base+=15
-
-    else:
-        user_non_active.append(i)
-            
-'''        
-        
-        
-
-        
-            
-            
-            
-
-    
-    
-
-    
-
-
-
 
          
