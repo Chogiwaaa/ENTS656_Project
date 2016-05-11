@@ -42,7 +42,7 @@ BETA_F= 865 #MHz
 
 #the mobile will have the following properties, some of which may be varied
 hm = 1.5 #in m, height of mobile
-HOM = 3# db handoff margin
+HOM = 0# db handoff margin
 RSL_T = -102 #dBm mobile Rx Threshold
 
 #users uniformly distributed
@@ -196,163 +196,170 @@ def user_has_call():
     global archieve_users
     ''' Computing location, new rsl , call length for every caller
         '''
-    for each_users in active_users:
-
-        is_handoff=2
-        if len(active_users[each_users]) == 0:
-            break
-        else:
-            ''' Obtaing the user direction, sector, user location
-                '''
-            for details2 in active_users[each_users]:
-                for k,v in details2.items():
-                    if k == 'user_dir':
-                        user_dir = v
-            for details3 in active_users[each_users]:
-                for key,value in details3.items():
-                    if key == 'sector':
-                        serving_sector = value
-            '''Re calculating the user location as he travels
-                '''
-            for details4 in active_users[each_users]:
-                for key,value in details4.items():
-                    if key == 'user_loc':
-                        if user_dir == 'north' and value >0 :
-                            details4[key]=value-V_SPEED
-                        elif user_dir == 'south' and value <6000 :
-                            details4[key]=value+V_SPEED
-                        '''user’s location has moved beyond the ends of the road.
-                            If so, then we assume the user has handed off to another basestation
-                            further down the road. Record this as a successful call on this sector 
-                            And a channel is made free in the sector
-                            '''
-                        if value <0 or value >6000:
-                            active_users[each_users].append({"Call_exit_status":"Successful call"})
-                            archieve_users.append(active_users[each_users])
-                            del active_users[each_users]
-                            #active_users[each_users] = []
-                            if serving_sector == 'alpha':
-                                md.NUM_CH_A +=1
-                            else:
-                                md.NUM_CH_B +=1
-                            
-            '''If the user’s call timer has run out, then the call completes normally.
-                Record this as a successful call on that sector
-                '''
-            try:
-                for details5 in active_users[each_users]:
-                    for key,value in details5.items():
-                        if key == 'call length':
-                            if value > 0:
-                                details5[key]=value-1
-                            elif value == 0:
+    try:
+        for each_users in active_users:
+    
+            is_handoff=2
+            if len(active_users[each_users]) == 0:
+                break
+            else:
+                ''' Obtaing the user direction, sector, user location
+                    '''
+                for details2 in active_users[each_users]:
+                    for k,v in details2.items():
+                        if k == 'user_dir':
+                            user_dir = v
+                for details3 in active_users[each_users]:
+                    for key,value in details3.items():
+                        if key == 'sector':
+                            serving_sector = value
+                '''Re calculating the user location as he travels
+                    '''
+                for details4 in active_users[each_users]:
+                    for key,value in details4.items():
+                        if key == 'user_loc':
+                            if user_dir == 'north' and value >0 :
+                                details4[key]=value-V_SPEED
+                            elif user_dir == 'south' and value <6000 :
+                                details4[key]=value+V_SPEED
+                            '''user’s location has moved beyond the ends of the road.
+                                If so, then we assume the user has handed off to another basestation
+                                further down the road. Record this as a successful call on this sector 
+                                And a channel is made free in the sector
+                                '''
+                            if value <0 or value >6000:
                                 active_users[each_users].append({"Call_exit_status":"Successful call"})
                                 archieve_users.append(active_users[each_users])
-                                del active_users[each_users] 
+                                del active_users[each_users]
                                 #active_users[each_users] = []
                                 if serving_sector == 'alpha':
                                     md.NUM_CH_A +=1
                                 else:
                                     md.NUM_CH_B +=1
-            except KeyError:
+                                
+                '''If the user’s call timer has run out, then the call completes normally.
+                    Record this as a successful call on that sector
+                    '''
+                try:
+                    for details5 in active_users[each_users]:
+                        for key,value in details5.items():
+                            if key == 'call length':
+                                if value > 0:
+                                    details5[key]=value-1
+                                elif value == 0:
+                                    active_users[each_users].append({"Call_exit_status":"Successful call"})
+                                    archieve_users.append(active_users[each_users])
+                                    del active_users[each_users] 
+                                    #active_users[each_users] = []
+                                    if serving_sector == 'alpha':
+                                        md.NUM_CH_A +=1
+                                    else:
+                                        md.NUM_CH_B +=1
+                except KeyError:
+                        break
+                                
+                '''Calculate the RSLSERVER. This will be at a new location,
+                    with new EIRP, path loss, shadowing and fading values.
+                    '''
+                try:
+                    for details1 in active_users[each_users]:
+                        for key,value in details1.items():
+                            if key == 'user_loc':
+                                new_user_loc = value
+                except KeyError:
                     break
-                            
-            '''Calculate the RSLSERVER. This will be at a new location,
-                with new EIRP, path loss, shadowing and fading values.
-                '''
-            try:
-                for details1 in active_users[each_users]:
-                    for key,value in details1.items():
-                        if key == 'user_loc':
-                            new_user_loc = value
-            except KeyError:
-                break
-            if new_user_loc > 3000:
-                dist2mobbase_new = new_user_loc - 3000
-            else:
-                dist2mobbase_new = 3000-new_user_loc
-            dist_mob2base_send = math.sqrt((loc_b**2 + dist2mobbase_new**2))
-            rsl_sectorA,rsl_sectorB = md.rsl_eirp(dist_mob2base_send,new_user_loc)
-            '''RSLSERVER is greater than or equal to the RSL threshold                               '''
-            if serving_sector == "alpha":
-                rsl_mob = rsl_sectorA
-            else:
-                rsl_mob = rsl_sectorB
-            for details8 in active_users[each_users]:
-                for key,value in details8.items():
-                    if key == 'rsl':
-                        details8[key]=rsl_mob
-            
-            '''If RSLSERVER < RSLTHRESH the call drops.
-                Record this as a dropped call due to signal strength for the
-                serving sector. 
-                '''
-            if rsl_mob < RSL_T:                
-                '''call attempt failed due to signal strength less than threshold
-                                And move to the next user
-                '''
-                if rsl_sectorA > rsl_sectorB:
-                    sector = "alpha"
+                if new_user_loc > 3000:
+                    dist2mobbase_new = new_user_loc - 3000
                 else:
-                    sector = "beta"
-                active_users[each_users].append({"sector": sector})
-                active_users[each_users].append({"call_status":"Call Failed"})
-                active_users[each_users].append({"Call Dropped":"Signal Strength"})
-                failed_users[each_users]=(active_users[each_users])
-                #active_users[each_users] = []
-                del active_users[each_users]
-                if serving_sector == 'alpha':
-                    md.NUM_CH_A +=1
+                    dist2mobbase_new = 3000-new_user_loc
+                dist_mob2base_send = math.sqrt((loc_b**2 + dist2mobbase_new**2))
+                rsl_sectorA,rsl_sectorB = md.rsl_eirp(dist_mob2base_send,new_user_loc)
+                '''RSLSERVER is greater than or equal to the RSL threshold                               '''
+                if serving_sector == "alpha":
+                    rsl_mob = rsl_sectorA
                 else:
-                    md.NUM_CH_B +=1
-                '''If RSLSERVER ≥ RSLTHRESH, compute the RSL for the other sector,
-                RSLOTHER. If RSLOTHER > RSLSERVER +HOm, then there is a
-                potential handoff.
+                    rsl_mob = rsl_sectorB
+                for details8 in active_users[each_users]:
+                    for key,value in details8.items():
+                        if key == 'rsl':
+                            details8[key]=rsl_mob
+                
+                '''If RSLSERVER < RSLTHRESH the call drops.
+                    Record this as a dropped call due to signal strength for the
+                    serving sector. 
                     '''
-                '''Hand off initiated at alpha sector to beta
+                if rsl_mob < RSL_T:                
+                    '''call attempt failed due to signal strength less than threshold
+                                    And move to the next user
                     '''
-            else:
-                if is_handoff >1:
-                    if serving_sector == 'alpha':
-                        if rsl_sectorB >= rsl_sectorA + HOM:
-                            #print "handoff happenning"
-                            active_users[each_users].append({"hand_off": serving_sector})
-                            if md.NUM_CH_B >0 and md.NUM_CH_B <=15:
-                                for details6 in active_users[each_users]:
-                                    for key,value in details6.items():
-                                        if key == 'sector':
-                                            details6[key]="beta"
-                                        if key == 'rsl':
-                                            details6[key] = rsl_sectorB
-                                                
-                                active_users[each_users].append({"hand_off_status": "Successful"})
-                                is_handoff +=1
-                                md.NUM_CH_A +=1
-                                md.NUM_CH_B -=1
-                            else:
-                                active_users[each_users].append({"hand_off_status": "Failure"})
-                                is_handoff +=1
-                        '''Hand off initiated beta sector to alpha
-                            '''
+                    if rsl_sectorA > rsl_sectorB:
+                        sector = "alpha"
                     else:
-                        if rsl_sectorA >= rsl_sectorB + HOM:
-                            #print "handoff happenning"
-                            active_users[each_users].append({"hand_off": serving_sector})
-                            if md.NUM_CH_A >0 and md.NUM_CH_A <=15:
-                                for details7 in active_users[each_users]:
-                                    for key,value in details7.items():
-                                        if key == 'sector':
-                                            details7[key]="alpha"
-                                        if key == 'rsl':
-                                            details7[key] = rsl_sectorA
-                                active_users[each_users].append({"hand_off_status": "Successful"})
-                                is_handoff +=1
-                                md.NUM_CH_A -=1
-                                md.NUM_CH_B +=1
-                            else:
-                                active_users[each_users].append({"hand_off_status": "Failure"})
-                                is_handoff +=1
+                        sector = "beta"
+                    active_users[each_users].append({"sector": sector})
+                    active_users[each_users].append({"call_status":"Call Failed"})
+                    active_users[each_users].append({"Call Dropped":"Signal Strength"})
+                    failed_users[each_users]=(active_users[each_users])
+                    #active_users[each_users] = []
+                    del active_users[each_users]
+                    if serving_sector == 'alpha':
+                        md.NUM_CH_A +=1
+                    else:
+                        md.NUM_CH_B +=1
+                    '''If RSLSERVER ≥ RSLTHRESH, compute the RSL for the other sector,
+                    RSLOTHER. If RSLOTHER > RSLSERVER +HOm, then there is a
+                    potential handoff.
+                        '''
+                    '''Hand off initiated at alpha sector to beta
+                        '''
+                else:
+                    if is_handoff >1:
+                        if serving_sector == 'alpha':
+                            if rsl_sectorB >= rsl_sectorA + HOM:
+                                #print "handoff happenning"
+                                active_users[each_users].append({"hand_off": serving_sector})
+                                if md.NUM_CH_B >0 and md.NUM_CH_B <=15:
+                                    for details6 in active_users[each_users]:
+                                        for key,value in details6.items():
+                                            if key == 'sector':
+                                                details6[key]="beta"
+                                            if key == 'rsl':
+                                                details6[key] = rsl_sectorB
+                                                    
+                                    active_users[each_users].append({"hand_off_status": "Successful"})
+                                    is_handoff +=1
+                                    md.NUM_CH_A +=1
+                                    md.NUM_CH_B -=1
+                                else:
+                                    active_users[each_users].append({"hand_off_status": "Failure"})
+                                    is_handoff +=1
+                            '''Hand off initiated beta sector to alpha
+                                '''
+                        else:
+                            if rsl_sectorA >= rsl_sectorB + HOM:
+                                #print "handoff happenning"
+                                active_users[each_users].append({"hand_off": serving_sector})
+                                if md.NUM_CH_A >0 and md.NUM_CH_A <=15:
+                                    for details7 in active_users[each_users]:
+                                        for key,value in details7.items():
+                                            if key == 'sector':
+                                                details7[key]="alpha"
+                                            if key == 'rsl':
+                                                details7[key] = rsl_sectorA
+                                    active_users[each_users].append({"hand_off_status": "Successful"})
+                                    is_handoff +=1
+                                    md.NUM_CH_A -=1
+                                    md.NUM_CH_B +=1
+                                else:
+                                    active_users[each_users].append({"hand_off_status": "Failure"})
+                                    is_handoff +=1
+    
 
+
+
+
+    except Exception:
+        pass
 ''' Probablity of a call = λ*ΔT ; probability of a call is taken from 1 to 1800
     which will be 1 in 1800 and checked with a random number say 1800 
     '''
@@ -361,13 +368,14 @@ def user_has_call():
 
 def main():
     print "Welcome to Python application which will simulate the downlink behavior of a 3-sectored basestation"
+    numpy.random.seed(0)
     no_calls_can_make = 0
     active=0
     md.shadow_pre_cal()
     NO_USERS = 160
     archieve_users_list=[]
     num=0
-    '''Initial simulation of 1 hourTOT_SIM_SEC
+    '''Initial simulation of 1 hourTOT_SIM_SEC  NO_USERS
         '''
     for i in range (1,(3600+1)*6):
         if (i==3600 or i==3600*2 or i==3600*3 or i==3600*4 or i==3600*5 or i==3600*6):
@@ -383,7 +391,7 @@ def main():
         time        '''
         if(len(active_users)!=0):
             user_has_call()
-        for j in range (NO_USERS):
+        for j in range (NO_USERS*2):
             user_makes_new_call(num,i)
             num+=1
 
